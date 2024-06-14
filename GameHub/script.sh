@@ -19,6 +19,7 @@ GBA_SOURCE='https://archive.org/download/nointro.gba/                  7z'
 MD_SOURCE='https://archive.org/download/nointro.md/                    7z'
 FC_SOURCE='https://archive.org/download/nointro.nes/                   7z'
 SFC_SOURCE='https://archive.org/download/nointro.snes/                 7z'
+NDS_SOURCE='https://archive.org/download/ni-n-ds-dp/                   7z'
 
 export PATH="$sysdir/bin:$PATH"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$sysdir/lib:$sysdir/lib/parasyte"
@@ -110,7 +111,7 @@ rom_menu() {
 
 emu_menu() {
     clear
-    emus="<Back>\nPS\nGB\nGBC\nGBA\nFC\nSFC\nMD\n\n"
+    emus="<Back>\nPS\nGB\nGBC\nGBA\nFC\nSFC\nMD\nNDS\n\n"
     pick=$(echo -e "$emus" | $scriptdir/shellect.sh -b "$bline" -t "           [ Select Emulator ] ")
     [ "$pick" = "<Back>" ] && return
     EMU="$pick"
@@ -127,6 +128,7 @@ main_menu() {
             "MD") SRC="$MD_SOURCE" ;;
             "FC") SRC="$FC_SOURCE" ;;
             "SFC") SRC="$SFC_SOURCE" ;;
+            "NDS") SRC="$NDS_SOURCE" ;;  # Añadir esta línea
         esac
 
         opt1="${SRC:+Browse ${EMU} .${SRC##* } ROMs at $(basename ${SRC%% *})}"
