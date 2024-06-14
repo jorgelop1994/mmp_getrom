@@ -1,7 +1,0 @@
-{
-    "label": "Game Media Hub",
-    "icon": "../../Icons/Default/app/advancemenu.png",
-    "iconsel": "",
-    "launch": "launch.sh",
-    "description": "Access and manage your game media collections"
-}
