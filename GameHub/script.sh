@@ -2,14 +2,13 @@
 # This file goes to /.tmp_update/script
 
 sysdir="/mnt/SDCARD/.tmp_update"
-echo_cmd="echo -e"
 scriptdir="${sysdir}/script"
 romsdir="/mnt/SDCARD/Roms"
 workdir="/tmp"
 page_prefix="${workdir}/mmpgetrom_full_page_"
 rom_names_file="${workdir}/mmpgetrom_rom_names.txt"
 orig_rom_names_file="${workdir}/mmpgetrom_orig_rom_names.txt"
-bline="                    <Menu>: Exit        <A>: Select"
+log_file="/mnt/SDCARD/App/GameHub/logs/error_log.txt"
 
 PS_EUR_SOURCE='https://archive.org/download/chd_psx_eur/CHD-PSX-EUR/   chd'
 PS_USA_SOURCE='https://archive.org/download/chd_psx/CHD-PSX-USA/       chd'
@@ -27,12 +26,14 @@ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$sysdir/lib:$sysdir/lib/parasyte"
 decode_url() {
     local url_encoded
     url_encoded=$(cat)
-    url_decoded=$(echo "$url_encoded" | sed -e 's/%20/ /g' -e 's/%21/!/g' -e 's/%22/"/g' \
-                                           -e 's/%23/#/g' -e 's/%24/\$/g' -e 's/%25/%/g' \
-                                           -e 's/%26/\&/g' -e "s/%27/'/g" -e 's/%28/(/g' \
-                                           -e 's/%29/)/g' -e 's/%2A/*/g' -e 's/%2B/+/g' \
-                                           -e 's/%2C/,/g' -e 's/%2D/-/g' -e 's/%2E/./g' \
-                                           -e 's/%2F/\//g')
+    url_decoded=$(echo "$url_encoded" | sed -e 's/%20/ /g' -e 's/%21/!/g' \
+                                           -e 's/%22/"/g' -e 's/%23/#/g' \
+                                           -e 's/%24/\$/g' -e 's/%25/%/g' \
+                                           -e 's/%26/\&/g' -e "s/%27/'/g" \
+                                           -e 's/%28/(/g' -e 's/%29/)/g' \
+                                           -e 's/%2A/*/g' -e 's/%2B/+/g' \
+                                           -e 's/%2C/,/g' -e 's/%2D/-/g' \
+                                           -e 's/%2E/./g' -e 's/%2F/\//g')
     echo "$url_decoded"
 }
 
@@ -41,6 +42,11 @@ print_progress() {
         echo -n "."
         sleep 1
     done
+}
+
+log_error() {
+    local message="$1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - ERROR: $message" >> "$log_file"
 }
 
 rom_menu() {
@@ -56,7 +62,7 @@ rom_menu() {
         if [ "$mode" = "search" ]; then
             clear
             echo -ne "\e[?25h"  # Show cursor
-            $echo_cmd "(X): Show keyboard\n(Y): Keyboard position\n(A): Keypress\n(B): Toggle\n[L1]: Shift\n[R1]: Backspace\n[L2]: Left\n[R2]: Right\n/Se/: Tab\n/St/: Enter\n\n"
+            echo "(X): Show keyboard\n(Y): Keyboard position\n(A): Keypress\n(B): Toggle\n[L1]: Shift\n[R1]: Backspace\n[L2]: Left\n[R2]: Right\n/Se/: Tab\n/St/: Enter\n\n"
             readline -m "Search ${EMU} ROMs matching pattern: "
             rom_name_ptrn=$(cat /tmp/readline.txt)
             [ -z "$rom_name_ptrn" ] && return
@@ -69,6 +75,10 @@ rom_menu() {
             echo "Downloading list of ${EMU} .${ext} ROM files from"
             echo "$base_url"
             print_progress
+            if [ $? -ne 0 ]; then
+                log_error "Failed to download ROM list from $base_url"
+                continue
+            fi
         fi
 
         rom_names=$(cat "$page" | grep -oE 'href="[^\"]*\.'${ext}'"' | sed 's/href="//;s/"//' | \
@@ -85,7 +95,7 @@ rom_menu() {
         fi
 
         pick=$(echo -e "<Search>\n<Reload>\n<Back>\n<Exit>\n$rom_names\n\n" | \
-               $scriptdir/shellect.sh -b "$bline" -t "     [ ${EMU} roms matching '${rom_name_ptrn}' ] ")
+               $scriptdir/shellect.sh -b "                    <Menu>: Exit        <A>: Select" -t "     [ ${EMU} roms matching '${rom_name_ptrn}' ] ")
 
         clear
         case "$pick" in
@@ -99,7 +109,7 @@ rom_menu() {
                 echo "Downloading '$pick' to '$rom_dir'"
                 echo
                 if ! wget -O "$pick" -P "$rom_dir/" "${base_url}${rom_name}"; then
-                    echo "Download failed."
+                    log_error "Download failed for ROM: $pick"
                 fi
                 sleep 3
                 [ -f "$scriptdir/reset_list.sh" ] && "$scriptdir/reset_list.sh" "$romsdir/$EMU" > /dev/null 2>&1
@@ -112,7 +122,7 @@ rom_menu() {
 emu_menu() {
     clear
     emus="<Back>\nPS\nGB\nGBC\nGBA\nFC\nSFC\nMD\nNDS\n\n"
-    pick=$(echo -e "$emus" | $scriptdir/shellect.sh -b "$bline" -t "           [ Select Emulator ] ")
+    pick=$(echo -e "$emus" | $scriptdir/shellect.sh -b "                    <Menu>: Exit        <A>: Select" -t "           [ Select Emulator ] ")
     [ "$pick" = "<Back>" ] && return
     EMU="$pick"
 }
@@ -128,7 +138,7 @@ main_menu() {
             "MD") SRC="$MD_SOURCE" ;;
             "FC") SRC="$FC_SOURCE" ;;
             "SFC") SRC="$SFC_SOURCE" ;;
-            "NDS") SRC="$NDS_SOURCE" ;;  # Añadir esta línea
+            "NDS") SRC="$NDS_SOURCE" ;;
         esac
 
         opt1="${SRC:+Browse ${EMU} .${SRC##* } ROMs at $(basename ${SRC%% *})}"
@@ -138,14 +148,18 @@ main_menu() {
         opt5="<Exit>"
 
         pick=$(echo -e "$opt1\n$opt2\n\n$opt3\n$opt4\n$opt5\n\n" | \
-               $scriptdir/shellect.sh -b "$bline" -t "              [ OPTIONS ] ")
+               $scriptdir/shellect.sh -b "                    <Menu>: Exit        <A>: Select" -t "              [ OPTIONS ] ")
 
         case "$pick" in
             "$opt1") rom_menu "browse" ;;
             "$opt2") rom_menu "search" ;;
             "$opt3")
                 $scriptdir/reset_list.sh "$romsdir/$EMU"
-                echo "${EMU} romdir cache cleared."
+                if [ $? -ne 0 ]; then
+                    log_error "Failed to clear ROM directory cache for $EMU"
+                else
+                    echo "${EMU} romdir cache cleared."
+                fi
                 sleep 3
                 ;;
             "$opt4") emu_menu ;;
