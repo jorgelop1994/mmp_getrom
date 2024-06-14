@@ -1,4 +1,4 @@
-# Miyoo Mini Plus ROM Getter
+# Miyoo Mini Plus Game Media Hub 
 
 This repository contains the source code for the Miyoo Mini Plus Game Media Hub app. The app allows users to access and manage your game media collections for the Miyoo Mini Plus handheld gaming device.
 
