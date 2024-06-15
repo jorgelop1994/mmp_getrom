@@ -9,16 +9,9 @@ page_prefix="${workdir}/mmpgetrom_full_page_"
 rom_names_file="${workdir}/mmpgetrom_rom_names.txt"
 orig_rom_names_file="${workdir}/mmpgetrom_orig_rom_names.txt"
 log_file="/mnt/SDCARD/App/GameHub/logs/error_log.txt"
+emulator_list="/mnt/SDCARD/App/GameHub/emulator_list.txt"
 
-PS_EUR_SOURCE='https://archive.org/download/chd_psx_eur/CHD-PSX-EUR/   chd'
-PS_USA_SOURCE='https://archive.org/download/chd_psx/CHD-PSX-USA/       chd'
-GB_SOURCE='https://archive.org/download/nointro.gb/                    7z'
-GBC_SOURCE='https://archive.org/download/nointro.gbc-1/                7z'
-GBA_SOURCE='https://archive.org/download/nointro.gba/                  7z'
-MD_SOURCE='https://archive.org/download/nointro.md/                    7z'
-FC_SOURCE='https://archive.org/download/nointro.nes/                   7z'
-SFC_SOURCE='https://archive.org/download/nointro.snes/                 7z'
-NDS_SOURCE='https://archive.org/download/ni-n-ds-dp/                   7z'
+source /mnt/SDCARD/App/GameHub/setup_console_info.sh
 
 export PATH="$sysdir/bin:$PATH"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$sysdir/lib:$sysdir/lib/parasyte"
@@ -147,25 +140,16 @@ rom_menu() {
 
 emu_menu() {
     clear
-    emus="<Back>\nPS\nGB\nGBC\nGBA\nFC\nSFC\nMD\nNDS\n\n"
+    emus=$(cat "$emulator_list")
     pick=$(echo -e "$emus" | $scriptdir/shellect.sh -b "                    <Menu>: Exit        <A>: Select" -t "           [ Select Emulator ] ")
     [ "$pick" = "<Back>" ] && return
     EMU="$pick"
+    setup_console_info "$EMU"
 }
 
 main_menu() {
     while true; do
         clear
-        case "$EMU" in
-            "PS") SRC="$PS_EUR_SOURCE" ;;
-            "GB") SRC="$GB_SOURCE" ;;
-            "GBC") SRC="$GBC_SOURCE" ;;
-            "GBA") SRC="$GBA_SOURCE" ;;
-            "MD") SRC="$MD_SOURCE" ;;
-            "FC") SRC="$FC_SOURCE" ;;
-            "SFC") SRC="$SFC_SOURCE" ;;
-            "NDS") SRC="$NDS_SOURCE" ;;
-        esac
 
         opt1="${SRC:+Browse ${EMU} .${SRC##* } ROMs at $(basename ${SRC%% *})}"
         opt2="${SRC:+Search ${EMU} .${SRC##* } ROM at $(basename  ${SRC%% *})}"
