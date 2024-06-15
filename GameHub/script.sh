@@ -75,7 +75,7 @@ rom_menu() {
             "<Search>") mode="search" ;;
             "<Reload>") mode="search result"; rm -f "$page"; continue ;;
             *)
-                rom_name=$(grep -n "$pick" "$rom_names_file" | cut -d: -f1 | xargs -I {} sed -n "{}p" "$orig_rom_names_file" | awk '{print substr($0, index($0,$2))}')
+                rom_name=$(sed -n "$(grep -n "$pick" "$rom_names_file" | cut -d: -f1){p;q}" "$orig_rom_names_file")
                 rom_dir="${romsdir}/${EMU}"
                 echo "Downloading '$pick' to '$rom_dir'"
                 echo
