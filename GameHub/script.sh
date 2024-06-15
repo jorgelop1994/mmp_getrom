@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This file goes to /.tmp_update/script
 
 sysdir="/mnt/SDCARD/.tmp_update"
@@ -24,7 +24,6 @@ export PATH="$sysdir/bin:$PATH"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$sysdir/lib:$sysdir/lib/parasyte"
 
 decode_url() {
-    local url_encoded
     url_encoded=$(cat)
     url_decoded=$(echo "$url_encoded" | sed -e 's/%20/ /g' -e 's/%21/!/g' \
                                            -e 's/%22/"/g' -e 's/%23/#/g' \
@@ -39,14 +38,36 @@ decode_url() {
 
 print_progress() {
     while kill -0 "$wget_pid" 2> /dev/null; do
-        echo -n "."
+        printf "."
         sleep 1
     done
 }
 
 log_error() {
-    local message="$1"
+    message="$1"
     echo "$(date '+%Y-%m-%d %H:%M:%S') - ERROR: $message" >> "$log_file"
+}
+
+# Function to truncate text
+truncate_text() {
+    input_text="$1"
+    max_length="40"
+    
+    # Calculate the length of the input text
+    text_length=${#input_text}
+    
+    if [ "$text_length" -gt "$max_length" ]; then
+        # If input_text is longer than max_length, truncate it and add ellipsis
+        truncated_text="${input_text:0:33}..."
+        last_chars_beginning=$((text_length - 15))
+        last_chars="${input_text:$last_chars_beginning:15}"
+        echo "$truncated_text$last_chars"
+    else
+        # If input_text is shorter than or equal to max_length, return it as is
+        echo "$input_text"
+    fi
+    # If input_text is shorter than or equal to max_length, return it as is
+    echo "$input_text"
 }
 
 rom_menu() {
@@ -61,8 +82,8 @@ rom_menu() {
 
         if [ "$mode" = "search" ]; then
             clear
-            echo -ne "\e[?25h"  # Show cursor
-            echo "(X): Show keyboard\n(Y): Keyboard position\n(A): Keypress\n(B): Toggle\n[L1]: Shift\n[R1]: Backspace\n[L2]: Left\n[R2]: Right\n/Se/: Tab\n/St/: Enter\n\n"
+            printf "\e[?25h"  # Show cursor
+            printf "(X): Show keyboard\n(Y): Keyboard position\n(A): Keypress\n(B): Toggle\n[L1]: Shift\n[R1]: Backspace\n[L2]: Left\n[R2]: Right\n/Se/: Tab\n/St/: Enter\n\n"
             readline -m "Search ${EMU} ROMs matching pattern: "
             rom_name_ptrn=$(cat /tmp/readline.txt)
             [ -z "$rom_name_ptrn" ] && return
@@ -81,8 +102,8 @@ rom_menu() {
             fi
         fi
 
-        rom_names=$(cat "$page" | grep -oE 'href="[^\"]*\.'${ext}'"' | sed 's/href="//;s/"//' | \
-                    tee "$orig_rom_names_file" | decode_url | tee "$rom_names_file")
+        rom_names=$(grep -oE 'href="[^\"]*\.'"${ext}"'"' "$page" | sed 's/href="//;s/"//' | \
+                                    tee "$orig_rom_names_file" | decode_url | tee "$rom_names_file")
 
         [ -n "$rom_name_ptrn" ] && rom_names=$(grep "$rom_name_ptrn" "$rom_names_file")
 
@@ -94,7 +115,12 @@ rom_menu() {
             continue
         fi
 
-        pick=$(echo -e "<Search>\n<Reload>\n<Back>\n<Exit>\n$rom_names\n\n" | \
+        # Truncate each ROM name
+        truncated_rom_names=$(echo "$rom_names" | while read -r line; do
+            truncate_text "$line"
+        done)
+
+        pick=$(echo -e "<Search>\n<Reload>\n<Back>\n<Exit>\n$truncated_rom_names\n\n" | \
                $scriptdir/shellect.sh -b "                    <Menu>: Exit        <A>: Select" -t "     [ ${EMU} roms matching '${rom_name_ptrn}' ] ")
 
         clear
@@ -104,7 +130,7 @@ rom_menu() {
             "<Search>") mode="search" ;;
             "<Reload>") mode="search result"; rm -f "$page"; continue ;;
             *)
-                rom_name=$(sed -n "$(grep -n "$pick" "$rom_names_file" | cut -d: -f1){p;q}" "$orig_rom_names_file")
+                rom_name=$(grep -n "$pick" "$rom_names_file" | cut -d: -f1 | xargs -I {} sed -n "{}p" "$orig_rom_names_file" | awk '{print substr($0, index($0,$2))}')
                 rom_dir="${romsdir}/${EMU}"
                 echo "Downloading '$pick' to '$rom_dir'"
                 echo
