@@ -1,5 +1,7 @@
 #!/bin/bash
 
+emulator_list="/mnt/SDCARD/App/GameHub/emulator_list.txt"
+
 # Define base URLs and file extensions for each console
 setup_console_info() {
     case "$1" in
@@ -26,6 +28,9 @@ setup_console_info() {
             ;;
         NDS)
             SRC='https://archive.org/download/ni-n-ds-dp/ 7z'
+            ;;
+        COMMODORE)
+            SRC='https://archive.org/download/NoIntro-commodore-64_202302/Commodore%20-%2064/ zip'
             ;;
         *)
             echo "Unknown console: $1"
